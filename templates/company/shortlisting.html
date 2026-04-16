@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Results & Shortlisting{% endblock %}
+{% block page_title %}Results & Shortlisting{% endblock %}
+
+{% block content %}
+<div class="card mb-4 text-center p-4">
+  <div class="alert alert-info" style="margin-bottom:0">
+    <strong>Note:</strong> Generating new shortlists based on scores or passing candidates into the next round must be done by the Placement Administrator to ensure fairness and audit logs. You can review candidate progression below.
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body" style="background:var(--bg-color); border-bottom:1px solid var(--border-color); display:flex; gap:1rem; align-items:center;">
+    <h3 style="margin:0; font-size:15px">Select Round:</h3>
+    <form method="GET" style="display:flex; flex:1">
+      <select name="round_id" class="form-control" style="max-width:300px" onchange="this.form.submit()">
+        <option value="">-- Choose Round --</option>
+        {% for r in rounds %}
+          <option value="{{ r.round_id }}" {% if selected_round|string == r.round_id|string %}selected{% endif %}>
+            Round {{ r.round_number }}: {{ r.round_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+  
+  {% if selected_round %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Candidate</th>
+          <th>Department</th>
+          <th>Score</th>
+          <th>Remark/Feedback</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rr in results %}
+        <tr>
+          <td><b>{{ rr.name }}</b></td>
+          <td>{{ rr.department }}</td>
+          <td>{{ rr.score }}</td>
+          <td>{{ rr.feedback or '-' }}</td>
+          <td>
+            <span class="badge badge-{% if rr.status == 'shortlisted' %}success{% elif rr.status == 'rejected' %}danger{% else %}outline{% endif %}">
+              {{ rr.status|title }}
+            </span>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted">No candidates exist in this round yet. Contact Admin to push candidates.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center text-muted p-5">
+    Select a round from the drop-down above to view candidate progression.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

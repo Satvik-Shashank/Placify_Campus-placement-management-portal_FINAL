@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account — Placify</title>
+  <meta name="description" content="Sign up for Placify – Campus Placement Management System">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+
+<div class="login-page">
+
+  <!-- Left panel – branding -->
+  <div class="login-left">
+    <div class="login-brand" style="justify-content: center; margin-bottom: 24px;">
+      <img src="{{ url_for('static', filename='assets/logo.png') }}" alt="Placify Logo" style="max-height: 64px;">
+    </div>
+
+    <h1>Start your placement<br>journey today.</h1>
+    <p>Join the Placify ecosystem to instantly access the campus recruitment pipeline, track rounds, and receive your digital offer letters.</p>
+  </div>
+
+  <!-- Right panel – registration form -->
+  <div class="login-right" style="overflow-y: auto;">
+    <div class="login-card" style="margin: auto 0; width: 100%; max-width: 440px;">
+      <h2>Create an Account</h2>
+      <p class="login-sub">Register as a new student</p>
+
+      <!-- Flash messages -->
+      <div class="login-alerts">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      <form method="POST" action="{{ url_for('register') }}" id="registerForm">
+        
+        <div class="form-group">
+          <label class="form-label" for="name">Full Name</label>
+          <div class="input-wrap">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" class="form-control" id="name" name="name" placeholder="E.g. John Doe" required value="{{ request.form.name or '' }}">
+          </div>
+        </div>
+
+        <div class="form-group" style="display: flex; gap: 10px;">
+          <div style="flex: 1;">
+            <label class="form-label" for="roll_number">Roll Number</label>
+            <input type="text" class="form-control" id="roll_number" name="roll_number" placeholder="Enter Roll No." required value="{{ request.form.roll_number or '' }}">
+          </div>
+          <div style="flex: 1;">
+            <label class="form-label" for="department">Department</label>
+            <select class="form-control" id="department" name="department" required>
+              <option value="CSE">Computer Science</option>
+              <option value="IT">Information Tech</option>
+              <option value="ECE">Electronics</option>
+              <option value="ME">Mechanical</option>
+              <option value="CE">Civil</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">College Email Address</label>
+          <div class="input-wrap">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <input type="email" class="form-control" id="email" name="email" placeholder="you@college.edu" required autocomplete="email" value="{{ request.form.email or '' }}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-wrap">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" class="form-control" id="password" name="password" placeholder="Create a password" required autocomplete="new-password">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 btn-lg" style="margin-top:8px">
+          Register Account
+        </button>
+      </form>
+
+      <div style="text-align: center; margin-top: 1.5rem; font-size: 14px;">
+        Already have an account? <a href="{{ url_for('login') }}" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">Sign in here</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Auto-dismiss alerts
+setTimeout(() => {
+  document.querySelectorAll('.alert').forEach(a => { a.style.opacity='0'; setTimeout(()=>a.remove(),400); });
+}, 4000);
+</script>
+</body>
+</html>

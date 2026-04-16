@@ -17,12 +17,8 @@
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <!-- Brand -->
-    <div class="sidebar-brand">
-      <div class="brand-icon">P</div>
-      <div class="brand-text">
-        <span class="brand-name">Placify</span>
-        <span class="brand-sub">Placement System</span>
-      </div>
+    <div class="sidebar-brand" style="justify-content: center;">
+      <img src="{{ url_for('static', filename='assets/logo.png') }}" alt="Placify Logo" style="max-height: 48px; max-width: 100%;">
     </div>
 
     <!-- User Info -->
@@ -40,6 +36,8 @@
     <nav class="sidebar-nav">
       {% if session.role == 'admin' %}
         {% include 'components/sidebar_admin.html' %}
+      {% elif session.role == 'company' %}
+        {% include 'components/sidebar_company.html' %}
       {% else %}
         {% include 'components/sidebar_student.html' %}
       {% endif %}

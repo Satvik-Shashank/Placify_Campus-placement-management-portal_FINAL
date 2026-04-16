@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Hiring Analytics{% endblock %}
+{% block page_title %}Hiring Analytics{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+  <div class="card mb-4">
+    <div class="card-header"><h3 class="card-title">Recruitment Drive Statistics</h3></div>
+    <div class="card-body">
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap:1rem;">
+        <div class="form-group border-bottom pb-2">
+           <label class="text-muted" style="font-size:13px">Total Applicants</label>
+           <div style="font-size:24px;font-weight:700">{{ stats.total_applicants or 0 }}</div>
+        </div>
+        <div class="form-group border-bottom pb-2">
+           <label class="text-muted" style="font-size:13px">Interviews Held</label>
+           <div style="font-size:24px;font-weight:700">{{ stats.rounds_conducted or 0 }}</div>
+        </div>
+        <div class="form-group border-bottom pb-2">
+           <label class="text-muted" style="font-size:13px">Total Offers Made</label>
+           <div style="font-size:24px;font-weight:700">{{ stats.offers_made or 0 }}</div>
+        </div>
+        <div class="form-group border-bottom pb-2">
+           <label class="text-muted" style="font-size:13px">Accepted Offers</label>
+           <div style="font-size:24px;font-weight:700; color:var(--success-color)">{{ stats.offers_accepted or 0 }}</div>
+        </div>
+      </div>
+      
+      {% if stats.total_applicants and stats.total_applicants > 0 %}
+      <div class="mt-4 pt-3 border-top text-center">
+        <label class="text-muted" style="font-size:13px">Selection Ratio</label>
+        <div style="font-size:32px;font-weight:800; color:var(--primary-color)">
+          {{ ((stats.offers_made / stats.total_applicants) * 100)|round(1) }}%
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><h3 class="card-title">Hiring Funnel</h3></div>
+    <div class="card-body" style="height: 300px; display:flex; align-items:center; justify-content:center;">
+       <canvas id="funnelChart"></canvas>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Simple Funnel Visualization mapping
+  const ctx = document.getElementById('funnelChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Applied', 'Shortlisted', 'Interviewed', 'Offered'],
+      datasets: [{
+        label: 'Candidates',
+        data: [
+          {{ stats.total_applicants or 0 }}, 
+          {{ (stats.total_applicants or 0) * 0.6 if stats.total_applicants else 0 }}, 
+          {{ stats.rounds_conducted * 8 if stats.rounds_conducted else 0 }}, 
+          {{ stats.offers_made or 0 }}
+        ],
+        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+        borderColor: '#3b82f6',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y', // Makes it a horizontal bar chart to mimic a funnel
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { beginAtZero: true }
+      }
+    }
+  });
+</script>
+{% endblock %}

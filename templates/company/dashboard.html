@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Recruiter Dashboard{% endblock %}
+{% block page_title %}Recruiter Dashboard{% endblock %}
+
+{% block content %}
+<div class="card-grid mb-4">
+  <div class="stat-card">
+    <div class="stat-card-title">Total Applicants</div>
+    <div class="stat-card-value">{{ stats.total_applicants }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-title">Shortlisted</div>
+    <div class="stat-card-value">{{ stats.shortlisted }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-title">Selected</div>
+    <div class="stat-card-value text-success">{{ stats.selected }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-title">Offers Released</div>
+    <div class="stat-card-value text-primary">{{ stats.offers_released }}</div>
+  </div>
+</div>
+
+<div class="grid" style="grid-template-columns: 2fr 1fr;">
+  <div>
+    <div class="card mb-4">
+      <div class="card-header">
+        <h3 class="card-title">Active Interview Rounds</h3>
+        <a href="{{ url_for('company_rounds') }}" class="btn btn-sm btn-outline">Manage Rounds</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Round</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Venue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in active_rounds %}
+            <tr>
+              <td><b>Round {{ r.round_number }}:</b> {{ r.round_name }}</td>
+              <td><span class="badge badge-outline">{{ r.round_type|title }}</span></td>
+              <td>{{ r.scheduled_date|fmt_date }}</td>
+              <td>{{ r.venue }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted">No active rounds scheduled.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Quick Actions</h3></div>
+      <div class="card-body">
+        <a href="{{ url_for('company_pipeline') }}" class="btn btn-primary w-100 mb-2">View Applicant Pipeline</a>
+        <a href="{{ url_for('company_shortlist') }}" class="btn btn-outline w-100 mb-2">Update Round Results</a>
+        <a href="{{ url_for('company_offers') }}" class="btn btn-outline w-100">Release Offers</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

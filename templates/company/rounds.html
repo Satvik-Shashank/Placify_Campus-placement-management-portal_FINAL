@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Interview Rounds{% endblock %}
+{% block page_title %}Interview Rounds{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns: 2fr 1fr;">
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">Active Rounds</h3></div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Round</th>
+            <th>Platform/Venue</th>
+            <th>Date</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rounds %}
+          <tr>
+            <td>
+              <div style="font-weight:600">Round {{ r.round_number }}: {{ r.round_name }}</div>
+            </td>
+            <td>{{ r.venue }}</td>
+            <td>{{ r.scheduled_date|fmt_date }}</td>
+            <td><span class="badge badge-outline">{{ r.round_type }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-muted">No rounds configured.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">Schedule New Round</h3></div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="form-group">
+          <label class="form-label">Round Number</label>
+          <input type="number" name="round_number" class="form-control" value="{{ (rounds|length) + 1 }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Round Name</label>
+          <input type="text" name="round_name" placeholder="e.g. Technical Interview 1" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Round Type</label>
+          <select name="round_type" class="form-control">
+            <option value="aptitude">Aptitude Test</option>
+            <option value="coding">Coding Assessment</option>
+            <option value="technical">Technical Interview</option>
+            <option value="hr">HR Interview</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date & Time</label>
+          <input type="datetime-local" name="scheduled_date" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Venue / Link</label>
+          <input type="text" name="venue" placeholder="e.g. MS Teams Link" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Create Round</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Offer Release{% endblock %}
+{% block page_title %}Offer Release{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns: 2fr 1fr;">
+  <div class="card mb-4">
+    <div class="card-header"><h3 class="card-title">Release New Offer</h3></div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="form-group">
+          <label class="form-label">Select Finalist Candidate</label>
+          <select name="application_id" class="form-control" required>
+            <option value="">-- Choose Candidate --</option>
+            {% for a in apps %}
+              <option value="{{ a.application_id }}">{{ a.name }}</option>
+            {% endfor %}
+          </select>
+          {% if not apps %}
+          <small class="text-danger mt-1 d-block">No candidates have reached the 'Selected' pipeline status yet.</small>
+          {% endif %}
+        </div>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Offered CTC (LPA)</label>
+            <input type="number" step="0.1" name="ctc" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Job Role</label>
+            <input type="text" name="role" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Student Acceptance Deadline</label>
+          <input type="date" name="deadline" class="form-control" required>
+        </div>
+        <div class="mt-3 text-right">
+          <button type="submit" class="btn btn-primary" {% if not apps %}disabled{% endif %}>Issue Digital Offer Letter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card mb-4" style="background:#f8f9fa;">
+    <div class="card-body p-4 text-center">
+      <div style="font-size:36px; margin-bottom:10px">📜</div>
+      <h4>Digital Offers</h4>
+      <p class="text-muted" style="font-size:14px">Offers released through Placify use ACID transactions to guarantee a candidate cannot hold multiple binding offers outside of college policy.</p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3 class="card-title">Issued Offers</h3></div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Candidate Name</th>
+          <th>Role / Package</th>
+          <th>Released On</th>
+          <th>Deadline</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in offers %}
+        <tr>
+          <td><b>{{ o.name }}</b> <div class="text-muted" style="font-size:12px">{{ o.department }}</div></td>
+          <td>{{ o.offered_role }}<br><b style="color:var(--primary-color)">{{ o.offered_ctc }} LPA</b></td>
+          <td>{{ o.created_at|fmt_date }}</td>
+          <td>{{ o.acceptance_deadline|fmt_date }}</td>
+          <td>
+            <span class="badge badge-{% if o.status == 'accepted' %}success{% elif o.status == 'declined' %}danger{% elif o.status == 'revoked' %}outline{% else %}primary{% endif %}">
+              {{ o.status|title }}
+            </span>
+            {% if o.status == 'accepted' %}<div class="text-success mt-1" style="font-size:11px">Accepted: {{ o.accepted_at|fmt_date }}</div>{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted">No offers issued yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

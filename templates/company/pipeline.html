@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Applicant Pipeline{% endblock %}
+{% block page_title %}Applicant Pipeline{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="display-flex justify-between" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+      <h3 style="margin:0;">Filter Pipeline</h3>
+      <form method="GET" style="display:flex; gap:0.5rem;">
+        <select name="status" class="form-control" onchange="this.form.submit()">
+          <option value="">All Candidates</option>
+          <option value="applied" {% if status_f == 'applied' %}selected{% endif %}>Applied</option>
+          <option value="in_progress" {% if status_f == 'in_progress' %}selected{% endif %}>In Progress</option>
+          <option value="selected" {% if status_f == 'selected' %}selected{% endif %}>Selected</option>
+          <option value="rejected" {% if status_f == 'rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Candidate Name</th>
+          <th>Department</th>
+          <th>CGPA</th>
+          <th>Pipeline Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in applicants %}
+        <tr>
+          <td><strong>{{ a.name }}</strong></td>
+          <td>{{ a.department }}</td>
+          <td><b>{{ a.cgpa }}</b></td>
+          <td>
+            <span class="badge badge-{% if a.status == 'selected' %}success{% elif a.status == 'rejected' %}danger{% elif a.status == 'in_progress' %}primary{% else %}outline{% endif %}">
+              {{ a.status|replace('_', ' ')|title }}
+            </span>
+          </td>
+          <td>
+            <a href="{{ url_for('company_applicant_review', student_id=a.student_id) }}" class="btn btn-sm btn-outline">Review Profile</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted">No applicants found in this stage.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

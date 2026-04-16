@@ -149,13 +149,13 @@ def run_sql_file(conn, path: str):
 def create_admin(conn):
     print("  -> Creating admin user ...", end=' ')
     cursor = conn.cursor()
-    ph = generate_password_hash('Admin@123')
+    ph = generate_password_hash('admin123')
     try:
         cursor.execute(
             "INSERT INTO users (email, password_hash, role) VALUES (%s, %s, 'admin')",
-            ('admin@placify.edu', ph)
+            ('admin@placify.com', ph)
         )
-        print("[OK] admin@placify.edu / Admin@123")
+        print("[OK] admin@placify.com / admin123")
     except Error as e:
         if e.errno == 1062:
             print("(already exists - skipped)")
@@ -164,33 +164,73 @@ def create_admin(conn):
     cursor.close()
 
 
-def create_demo_student(conn):
-    """Create a demo student account for testing."""
-    print("  -> Creating demo student ...", end=' ')
+def create_demo_students(conn):
+    """Create several demo student accounts for a realistic demo."""
+    students_data = [
+        ('student@placify.com', 'student123', 'S2025001', 'Satvik Student',  'CSE', 9.2),
+        ('cs_arjun@placify.com', 'student123', 'S2025002', 'Arjun Sharma',    'CSE', 8.8),
+        ('it_sneha@placify.com', 'student123', 'S2025003', 'Sneha Pillai',   'IT',  9.3),
+        ('ec_aisha@placify.com', 'student123', 'S2025004', 'Aisha Khan',     'ECE', 8.5),
+        ('me_vikram@placify.com','student123', 'S2025005', 'Vikram Patel',   'ME',  7.8)
+    ]
+    
+    print("\n  -> Populating demo students ...")
     cursor = conn.cursor()
-    ph = generate_password_hash('Student@123')
-    try:
-        cursor.execute(
-            "INSERT INTO users (email, password_hash, role) VALUES (%s, %s, 'student')",
-            ('student@placify.edu', ph)
-        )
-        uid = cursor.lastrowid
-        cursor.execute(
-            """INSERT INTO students
-               (user_id, roll_number, name, email, phone, gender, dob,
-                department, batch_year, cgpa, backlogs)
-               VALUES (%s,'DEMO2025','Demo Student','student@placify.edu',
-                       '9999999999','male','2004-01-01','CSE',2025,8.5,0)""",
-            (uid,)
-        )
-        print("[OK] student@placify.edu / Student@123")
-    except Error as e:
-        if e.errno == 1062:
-            print("(already exists - skipped)")
-        else:
-            print(f"Error: {e}")
+    for email, pwd, roll, name, dept, cgpa in students_data:
+        ph = generate_password_hash(pwd)
+        try:
+            # Force update if exists, or insert new
+            cursor.execute("SELECT user_id FROM users WHERE email = %s", (email,))
+            row = cursor.fetchone()
+            if row:
+                uid = row[0]
+                cursor.execute("UPDATE users SET password_hash = %s WHERE user_id = %s", (ph, uid))
+                print(f"     [UPDATED] {email}")
+            else:
+                cursor.execute("INSERT INTO users (email, password_hash, role) VALUES (%s, %s, 'student')", (email, ph))
+                uid = cursor.lastrowid
+                cursor.execute(
+                    """INSERT INTO students (user_id, roll_number, name, email, department, batch_year, cgpa, backlogs, phone, dob, gender)
+                       VALUES (%s, %s, %s, %s, %s, 2025, %s, 0, '9999999999', '2004-01-01', 'male')""",
+                    (uid, roll, name, email, dept, cgpa)
+                )
+                print(f"     [CREATED] {email} / {pwd}")
+        except Error as e:
+            print(f"     [ERROR] {email}: {e}")
     cursor.close()
 
+def create_demo_company(conn):
+    """Create the Microsoft HR company account."""
+    print("  -> Creating demo company (Microsoft) ...", end=' ')
+    cursor = conn.cursor()
+    # Find Microsoft's company ID (if exists, or assign to Amazon/Google dynamically)
+    cursor.execute("SELECT company_id FROM companies WHERE name LIKE '%Microsoft%' LIMIT 1")
+    row = cursor.fetchone()
+    if not row:
+        # Fallback to the first company or we'll insert a mock one
+        cursor.execute("INSERT IGNORE INTO companies (name, company_type, job_role, ctc_lpa, visit_date, registration_deadline, status) VALUES ('Microsoft', 'mnc', 'Software Engineer', 44.0, DATE_ADD(CURDATE(), INTERVAL 30 DAY), DATE_ADD(NOW(), INTERVAL 20 DAY), 'upcoming')")
+        company_id = cursor.lastrowid
+        # Also add eligibility
+        cursor.execute("INSERT IGNORE INTO eligibility_criteria (company_id, min_cgpa, max_backlogs, allowed_departments) VALUES (%s, 8.5, 0, '[\"CSE\",\"IT\"]')", (company_id,))
+    else:
+        company_id = row[0]
+
+    ph = generate_password_hash('microsoft123')
+    try:
+        cursor.execute("SELECT user_id FROM users WHERE email = 'microsoft@placify.com'")
+        row = cursor.fetchone()
+        if row:
+            cursor.execute("UPDATE users SET password_hash = %s WHERE user_id = %s", (ph, row[0]))
+            print("[OK] microsoft@placify.com (Updated)")
+        else:
+            cursor.execute(
+                "INSERT INTO users (email, password_hash, role, company_id) VALUES (%s, %s, 'company', %s)",
+                ('microsoft@placify.com', ph, company_id)
+            )
+            print("[OK] microsoft@placify.com / microsoft123")
+    except Error as e:
+        print(f"[ERROR] {e}")
+    cursor.close()
 
 # ─── Main ──────────────────────────────────────────────────────────────────────
 
@@ -235,7 +275,8 @@ def main():
     # Seed accounts
     print("\nCreating default accounts:")
     create_admin(conn)
-    create_demo_student(conn)
+    create_demo_students(conn)
+    create_demo_company(conn)
 
     conn.close()
 
@@ -246,8 +287,9 @@ def main():
     print("  Start server :  python app.py")
     print("  Open browser :  http://localhost:5000")
     print()
-    print("  Admin login  :  admin@placify.edu   / Admin@123")
-    print("  Student login:  student@placify.edu / Student@123")
+    print("  Admin login  :  admin@placify.com   / admin123")
+    print("  Student login:  student@placify.com / student123")
+    print("  Company login:  microsoft@placify.com / microsoft123")
     print("================================================")
     print()
 

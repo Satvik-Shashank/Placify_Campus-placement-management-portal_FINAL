@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Profile: {{ student.name }}{% endblock %}
+{% block page_title %}Applicant Review{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('company_pipeline') }}" class="btn btn-sm btn-outline mb-4">← Back to Pipeline</a>
+
+<div class="grid" style="grid-template-columns: 2fr 1fr; gap: 2rem;">
+  <div>
+    <div class="card mb-4">
+      <div class="card-header"><h3 class="card-title">Academic Profile</h3></div>
+      <div class="card-body">
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:1rem;">
+          <div>
+            <label class="text-muted" style="font-size:12px">Full Name</label>
+            <div style="font-size:16px;font-weight:600">{{ student.name }}</div>
+          </div>
+          <div>
+            <label class="text-muted" style="font-size:12px">Roll Number</label>
+            <div>{{ student.roll_number }}</div>
+          </div>
+          <div>
+            <label class="text-muted" style="font-size:12px">Department</label>
+            <div>{{ student.department }} (Batch {{ student.batch_year }})</div>
+          </div>
+          <div>
+            <label class="text-muted" style="font-size:12px">CGPA</label>
+            <div style="font-size:18px;font-weight:bold;color:var(--primary-color)">{{ student.cgpa }}</div>
+          </div>
+          <div>
+            <label class="text-muted" style="font-size:12px">Active Backlogs</label>
+            <div>{{ student.backlogs }}</div>
+          </div>
+          <div>
+            <label class="text-muted" style="font-size:12px">Email</label>
+            <div><a href="mailto:{{ student.email }}" style="color:var(--primary-color);text-decoration:none">{{ student.email }}</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Verified Skills</h3></div>
+      <div class="card-body">
+        {% if skills %}
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          {% for sk in skills %}
+            <span class="badge badge-outline" style="font-size:14px; padding:6px 12px">
+              {{ sk.skill_name }} <small class="text-muted">({{ sk.proficiency }})</small>
+            </span>
+          {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-muted">No skills populated by candidate yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card mb-4" style="background:var(--sidebar-bg); border:1px solid var(--border-color);">
+      <div class="card-header"><h3 class="card-title">Recruiter Actions</h3></div>
+      <div class="card-body text-center">
+        {% if student.resume_path %}
+          <a href="#" class="btn btn-primary w-100 mb-2">View Resume PDF</a>
+        {% else %}
+          <button class="btn btn-primary w-100 mb-2" disabled>No Resume Uploaded</button>
+        {% endif %}
+        
+        <div class="mt-4 pt-3" style="border-top:1px solid var(--border-color)">
+           <p class="text-muted" style="font-size:13px; text-align:left">Use the <b>Shortlist & Results</b> tab to progress this candidate into active interview rounds.</p>
+           <a href="{{ url_for('company_shortlist') }}" class="btn btn-outline w-100">Go to Shortlisting</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

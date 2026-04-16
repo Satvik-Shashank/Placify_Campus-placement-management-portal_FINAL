@@ -32,50 +32,8 @@ INSERT IGNORE INTO skills (skill_name, category) VALUES
 ('AutoCAD',        'engineering'),
 ('VLSI Design',    'engineering');
 
--- =============================================================================
--- Admin user (backup insert — setup_db.py also handles this)
--- =============================================================================
-INSERT IGNORE INTO users (email, password_hash, role)
-VALUES ('admin@placify.edu',
-        '$pbkdf2-sha256$260000$placeholder_hash',
-        'admin');
-
--- =============================================================================
--- Student users
--- =============================================================================
-INSERT IGNORE INTO users (email, password_hash, role) VALUES
-('cs001@placify.edu', '$pbkdf2-sha256$260000$placeholder', 'student'),
-('cs002@placify.edu', '$pbkdf2-sha256$260000$placeholder', 'student'),
-('cs003@placify.edu', '$pbkdf2-sha256$260000$placeholder', 'student'),
-('ec001@placify.edu', '$pbkdf2-sha256$260000$placeholder', 'student'),
-('ec002@placify.edu', '$pbkdf2-sha256$260000$placeholder', 'student'),
-('it001@placify.edu', '$pbkdf2-sha256$260000$placeholder', 'student'),
-('me001@placify.edu', '$pbkdf2-sha256$260000$placeholder', 'student');
-
--- Students table (user_ids depend on insert order; use subqueries for safety)
-INSERT IGNORE INTO students
-  (user_id, roll_number, name, email, phone, gender, dob, department, batch_year, cgpa, backlogs)
-SELECT u.user_id,
-       d.roll_number, d.name, d.email, d.phone, d.gender, d.dob,
-       d.department, d.batch_year, d.cgpa, d.backlogs
-FROM users u
-JOIN (
-  SELECT 'cs001@placify.edu' AS email, 'CS2025001' AS roll_number, 'Arjun Sharma' AS name,
-         '9876543210' AS phone, 'male' AS gender, '2004-03-12' AS dob,
-         'CSE' AS department, 2025 AS batch_year, 9.1 AS cgpa, 0 AS backlogs
-  UNION ALL
-  SELECT 'cs002@placify.edu','CS2025002','Priya Nair','9876501234','female','2004-07-22','CSE',2025,8.4,0
-  UNION ALL
-  SELECT 'cs003@placify.edu','CS2025003','Rohit Verma','9876502345','male','2003-11-10','CSE',2025,7.2,1
-  UNION ALL
-  SELECT 'ec001@placify.edu','EC2025001','Aisha Khan','9876503456','female','2004-01-30','ECE',2025,8.8,0
-  UNION ALL
-  SELECT 'ec002@placify.edu','EC2025002','Karthik Raj','9876504567','male','2003-09-05','ECE',2025,6.5,2
-  UNION ALL
-  SELECT 'it001@placify.edu','IT2025001','Sneha Pillai','9876505678','female','2004-04-18','IT',2025,9.3,0
-  UNION ALL
-  SELECT 'me001@placify.edu','ME2025001','Vikram Patel','9876506789','male','2003-12-25','ME',2025,7.8,0
-) d ON u.email = d.email;
+-- Student and admin user creation is now handled dynamically by setup_db.py 
+-- to ensure correct password hashing for your environment.
 
 -- =============================================================================
 -- Companies

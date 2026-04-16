@@ -97,6 +97,15 @@ def student_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def company_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session or session.get('role') != 'company':
+            flash('Recruiter access required.', 'danger')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
 # =============================================================================
 # AUTH ROUTES
 # =============================================================================
@@ -104,7 +113,11 @@ def student_required(f):
 @app.route('/')
 def index():
     if 'user_id' in session:
-        return redirect(url_for('admin_dashboard') if session['role'] == 'admin' else url_for('student_dashboard'))
+        if session['role'] == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        elif session['role'] == 'company':
+            return redirect(url_for('company_dashboard'))
+        return redirect(url_for('student_dashboard'))
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -134,7 +147,12 @@ def login():
             flash('Account deactivated. Contact admin.', 'warning')
             return render_template('auth/login.html')
 
-        if not check_password_hash(user['password_hash'], password):
+        try:
+            is_valid = check_password_hash(user['password_hash'], password)
+        except Exception:
+            is_valid = False
+
+        if not is_valid:
             flash('Invalid email or password.', 'danger')
             return render_template('auth/login.html')
 
@@ -156,11 +174,77 @@ def login():
                 session['name']        = s['data']['name']
                 session['department']  = s['data']['department']
             return redirect(url_for('student_dashboard'))
+            
+        elif user['role'] == 'company':
+            c = execute_query(
+                """SELECT c.company_id, c.name FROM companies c 
+                   JOIN users u ON c.company_id = u.company_id 
+                   WHERE u.user_id = %s""",
+                (user['user_id'],), fetch_one=True
+            )
+            if c['success'] and c['data']:
+                session['company_id'] = c['data']['company_id']
+                session['name']       = c['data']['name'] + ' HR'
+            else:
+                session['name'] = 'Recruiter'
+            return redirect(url_for('company_dashboard'))
 
         session['name'] = 'Administrator'
         return redirect(url_for('admin_dashboard'))
 
     return render_template('auth/login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if 'user_id' in session:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        name     = request.form.get('name', '').strip()
+        email    = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        department = request.form.get('department', '').strip()
+        roll_num = request.form.get('roll_number', '').strip()
+
+        if not all([name, email, password, department, roll_num]):
+            flash('All fields are required.', 'danger')
+            return render_template('auth/register.html')
+
+        # Check if email exists
+        res = execute_query("SELECT user_id FROM users WHERE email = %s", (email,), fetch_one=True)
+        if res['success'] and res['data']:
+            flash('Email already registered. Try logging in.', 'danger')
+            return render_template('auth/register.html')
+
+        try:
+            pw_hash = generate_password_hash(password)
+            user_res = execute_query(
+                "INSERT INTO users (email, password_hash, role) VALUES (%s, %s, 'student')",
+                (email, pw_hash), fetch=False
+            )
+            
+            if user_res['success']:
+                uid = user_res['lastrowid']
+                # Create basic student record
+                student_res = execute_query(
+                    """INSERT INTO students (user_id, roll_number, name, email, department, batch_year, cgpa, backlogs)
+                       VALUES (%s, %s, %s, %s, %s, YEAR(CURDATE()), 0.0, 0)""",
+                    (uid, roll_num, name, email, department), fetch=False
+                )
+                
+                if student_res['success']:
+                    flash('Account created successfully! You can now log in.', 'success')
+                    return redirect(url_for('login'))
+                else:
+                    # rollback users
+                    execute_query("DELETE FROM users WHERE user_id = %s", (uid,), fetch=False)
+                    flash('Failed to create student profile.', 'danger')
+            else:
+                flash('Database error during registration.', 'danger')
+        except Exception as e:
+            flash(f'An error occurred: {str(e)}', 'danger')
+
+    return render_template('auth/register.html')
 
 @app.route('/logout')
 def logout():
@@ -943,6 +1027,153 @@ def api_company_chart():
 def health():
     from db import test_connection
     return jsonify({'status': 'ok', 'db_connected': test_connection()})
+
+
+# =============================================================================
+# COMPANY / RECRUITER ROUTES
+# =============================================================================
+
+@app.route('/company/dashboard')
+@company_required
+def company_dashboard():
+    cid = session.get('company_id')
+    if not cid:
+        flash('No company linked to your profile.', 'danger')
+        return redirect(url_for('logout'))
+        
+    def scalar(q, p=None):
+        r = execute_query(q, p, fetch_one=True)
+        return r['data']['v'] if r['success'] and r['data'] else 0
+
+    stats = {
+        'total_applicants': scalar("SELECT COUNT(*) AS v FROM applications WHERE company_id = %s", (cid,)),
+        'shortlisted': scalar("SELECT COUNT(*) AS v FROM applications WHERE company_id = %s AND status = 'in_progress'", (cid,)),
+        'selected': scalar("SELECT COUNT(*) AS v FROM applications WHERE company_id = %s AND status = 'selected'", (cid,)),
+        'offers_released': scalar("SELECT COUNT(*) AS v FROM offers o JOIN applications a ON o.application_id = a.application_id WHERE a.company_id = %s", (cid,)),
+    }
+    
+    stats['acceptance_rate'] = 0
+    if stats['offers_released'] > 0:
+        accepted = scalar("SELECT COUNT(*) AS v FROM offers o JOIN applications a ON o.application_id = a.application_id WHERE a.company_id = %s AND o.status = 'accepted'", (cid,))
+        stats['acceptance_rate'] = round(accepted / stats['offers_released'] * 100, 1)
+
+    rounds = execute_query("SELECT * FROM rounds WHERE company_id = %s ORDER BY round_number", (cid,))
+    active_rounds = rounds['data'] if rounds['success'] else []
+    
+    return render_template('company/dashboard.html', stats=stats, active_rounds=active_rounds)
+
+@app.route('/company/drives', methods=['GET', 'POST'])
+@company_required
+def company_drive():
+    cid = session['company_id']
+    if request.method == 'POST':
+        f = request.form
+        execute_query(
+            "UPDATE companies SET job_description=%s, ctc_lpa=%s, registration_deadline=%s, status=%s WHERE company_id=%s",
+            (f.get('job_description'), f.get('ctc_lpa'), f.get('registration_deadline'), f.get('status'), cid),
+            fetch=False
+        )
+        flash('Drive details updated.', 'success')
+        return redirect(url_for('company_drive'))
+        
+    company = execute_query("SELECT * FROM companies WHERE company_id=%s", (cid,), fetch_one=True)['data']
+    eligibility = execute_query("SELECT * FROM eligibility_criteria WHERE company_id=%s", (cid,), fetch_one=True)['data']
+    return render_template('company/drive.html', company=company, eligibility=eligibility)
+
+@app.route('/company/pipeline')
+@company_required
+def company_pipeline():
+    cid = session['company_id']
+    status_f = request.args.get('status', '')
+    
+    q = """SELECT a.application_id, a.status, s.student_id, s.name, s.department, s.cgpa, s.resume_path
+           FROM applications a JOIN students s ON a.student_id = s.student_id 
+           WHERE a.company_id = %s"""
+    params = [cid]
+    if status_f:
+        q += " AND a.status = %s"
+        params.append(status_f)
+        
+    q += " ORDER BY s.cgpa DESC"
+    result = execute_query(q, tuple(params))
+    applicants = result['data'] if result['success'] else []
+    
+    return render_template('company/pipeline.html', applicants=applicants, status_f=status_f)
+
+@app.route('/company/applicant/<int:student_id>')
+@company_required
+def company_applicant_review(student_id):
+    student = execute_query("SELECT * FROM students WHERE student_id=%s", (student_id,), fetch_one=True)['data']
+    if not student: return "Not found", 404
+    
+    skills = execute_query("SELECT sk.skill_name, ss.proficiency FROM student_skills ss JOIN skills sk ON ss.skill_id = sk.skill_id WHERE ss.student_id = %s", (student_id,))['data']
+    
+    return render_template('company/applicant_review.html', student=student, skills=skills)
+
+@app.route('/company/rounds', methods=['GET', 'POST'])
+@company_required
+def company_rounds():
+    cid = session['company_id']
+    if request.method == 'POST':
+        f = request.form
+        execute_query("INSERT INTO rounds (company_id, round_number, round_type, round_name, scheduled_date, venue) VALUES (%s,%s,%s,%s,%s,%s)",
+                     (cid, f.get('round_number'), f.get('round_type'), f.get('round_name'), f.get('scheduled_date'), f.get('venue')), fetch=False)
+        flash('Round added', 'success')
+        return redirect(url_for('company_rounds'))
+        
+    rounds = execute_query("SELECT * FROM rounds WHERE company_id=%s ORDER BY round_number", (cid,))['data']
+    return render_template('company/rounds.html', rounds=rounds)
+
+@app.route('/company/shortlist')
+@company_required
+def company_shortlist():
+    cid = session['company_id']
+    rounds = execute_query("SELECT * FROM rounds WHERE company_id=%s ORDER BY round_number", (cid,))['data']
+    
+    r_id = request.args.get('round_id')
+    results = []
+    if r_id:
+        results = execute_query(
+            "SELECT rr.*, s.name, s.department FROM round_results rr JOIN applications a ON rr.application_id = a.application_id JOIN students s ON a.student_id = s.student_id WHERE rr.round_id=%s",
+            (r_id,)
+        )['data']
+        
+    return render_template('company/shortlisting.html', rounds=rounds, results=results, selected_round=r_id)
+
+@app.route('/company/offers', methods=['GET', 'POST'])
+@company_required
+def company_offers():
+    cid = session['company_id']
+    if request.method == 'POST':
+        app_id = request.form.get('application_id')
+        ctc = request.form.get('ctc')
+        role = request.form.get('role')
+        deadline = request.form.get('deadline')
+        res = call_procedure_with_out_params('sp_create_offer', in_args=(app_id, ctc, role, 'Remote', None, deadline), out_param_count=2)
+        if res['success']: flash('Offer Released!', 'success')
+        else: flash(res.get('error', 'Error'), 'danger')
+        return redirect(url_for('company_offers'))
+        
+    offers = execute_query(
+        "SELECT o.*, s.name, s.department FROM offers o JOIN applications a ON o.application_id = a.application_id JOIN students s ON a.student_id = s.student_id WHERE a.company_id=%s ORDER BY o.created_at DESC",
+        (cid,)
+    )['data']
+    
+    apps = execute_query("SELECT a.application_id, s.name FROM applications a JOIN students s ON a.student_id=s.student_id WHERE a.company_id=%s AND a.status='selected' AND a.application_id NOT IN (SELECT application_id FROM offers)", (cid,))['data']
+    
+    return render_template('company/offers.html', offers=offers, apps=apps or [])
+
+@app.route('/company/analytics')
+@company_required
+def company_analytics():
+    cid = session['company_id']
+    comp = execute_query("SELECT * FROM vw_company_statistics WHERE company_id=%s", (cid,), fetch_one=True)['data'] or {}
+    return render_template('company/analytics.html', stats=comp)
+
+@app.route('/company/communications')
+@company_required
+def company_communications():
+    return render_template('company/communications.html')
 
 
 # =============================================================================

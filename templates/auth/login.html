@@ -15,12 +15,8 @@
 
   <!-- Left panel – branding -->
   <div class="login-left">
-    <div class="login-brand">
-      <div class="login-brand-icon">P</div>
-      <div>
-        <div class="login-brand-name">Placify</div>
-        <div class="login-tagline">Campus Placement System</div>
-      </div>
+    <div class="login-brand" style="justify-content: center; margin-bottom: 24px;">
+      <img src="{{ url_for('static', filename='assets/logo.png') }}" alt="Placify Logo" style="max-height: 64px;">
     </div>
 
     <h1>Your placement journey,<br>fully automated.</h1>
@@ -78,13 +74,9 @@
         </button>
       </form>
 
-      <!-- Demo credentials for faculty -->
-      <div class="demo-credentials">
-        <strong>Demo Credentials</strong>
-        <div><b>Admin:</b> admin@placify.edu &nbsp;|&nbsp; Admin@123</div>
-        <div style="margin-top:4px"><b>Student:</b> student@placify.edu &nbsp;|&nbsp; Student@123</div>
+      <div style="text-align: center; margin-top: 1.5rem; font-size: 14px;">
+        Don't have an account? <a href="{{ url_for('register') }}" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">Create an account</a>
       </div>
-
       <div class="login-footer">
         Placify &copy; {{ 2026 }} &mdash; Campus Placement Management System
       </div>
