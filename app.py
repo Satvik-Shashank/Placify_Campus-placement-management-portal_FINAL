@@ -16,7 +16,18 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 from config import get_config
-from db import execute_query, call_procedure, call_procedure_with_out_params
+
+try:
+    from db import execute_query, call_procedure, call_procedure_with_out_params
+    DB_AVAILABLE = True
+except Exception as _db_import_err:
+    import logging
+    logging.getLogger(__name__).error(f"DB import failed: {_db_import_err}")
+    DB_AVAILABLE = False
+    def execute_query(*a, **kw): return {'success': False, 'data': None, 'error': 'DB unavailable', 'rowcount': 0}
+    def call_procedure(*a, **kw): return {'success': False, 'data': None, 'error': 'DB unavailable'}
+    def call_procedure_with_out_params(*a, **kw): return {'success': False, 'data': None, 'out_params': [], 'error': 'DB unavailable'}
+
 
 # =============================================================================
 # APP INIT
