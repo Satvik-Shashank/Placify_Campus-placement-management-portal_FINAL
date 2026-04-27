@@ -1209,5 +1209,44 @@ def create_admin():
 # MAIN
 # =============================================================================
 
+# =============================================================================
+# ERROR HANDLERS
+# =============================================================================
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template('errors/404.html'), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template('errors/500.html'), 500
+
+@app.errorhandler(403)
+def forbidden(e):
+    flash('You do not have permission to access this page.', 'danger')
+    return redirect(url_for('login'))
+
+# =============================================================================
+# HEALTH CHECK
+# =============================================================================
+
+@app.route('/health')
+def health():
+    """Health check endpoint for deployment platforms."""
+    try:
+        from db import test_connection
+        db_ok = test_connection()
+    except Exception:
+        db_ok = False
+    status = 'ok' if db_ok else 'degraded'
+    code = 200 if db_ok else 503
+    return jsonify(status=status, service='placify', db=db_ok), code
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    import os
+    debug = os.environ.get('FLASK_ENV', 'development') == 'development'
+    app.run(debug=debug, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

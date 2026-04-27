@@ -1,9 +1,53 @@
+# =============================================================================
+# Placify — .gitignore
+# =============================================================================
+
+# Environment & secrets — NEVER commit these
 .env
+*.env.local
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.Python
+
+# Virtual environments
 venv/
 .venv/
 env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
 .idea/
 .vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Uploads (user files — not part of repo)
 uploads/
+
+# Logs
+*.log
+placify.log
+logs/
+
+# Database dumps
+*.sql.bak
+*.dump
+
+# Vercel
+.vercel/
+
+# OS
+desktop.ini

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Page Not Found — Placify{% endblock %}
+
+{% block content %}
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:2rem;">
+  <div style="font-size:7rem;font-weight:800;background:linear-gradient(135deg,#2563eb,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;">404</div>
+  <h1 style="font-size:1.75rem;font-weight:700;color:#1e293b;margin:.5rem 0;">Page Not Found</h1>
+  <p style="color:#64748b;max-width:400px;margin:.75rem auto 2rem;">Looks like this page took a wrong turn during placement season. Let's get you back on track.</p>
+  <a href="{{ url_for('index') }}" class="btn btn-primary" style="text-decoration:none;">
+    ← Back to Dashboard
+  </a>
+</div>
+{% endblock %}

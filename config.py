@@ -87,15 +87,36 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Strict'
+    PERMANENT_SESSION_LIFETIME = 1800  # 30 minutes in production
+    PREFERRED_URL_SCHEME = 'https'
     
     # Stricter CORS in production
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '').split(',')
     
-    # Production database might be different
-    MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE') or 'campus_placement_prod'
+    # Production database (use individual env vars OR DATABASE_URL)
+    DATABASE_URL = os.environ.get('DATABASE_URL', '')
+    if DATABASE_URL and DATABASE_URL.startswith('mysql'):
+        from urllib.parse import urlparse as _urlparse
+        _parsed = _urlparse(DATABASE_URL)
+        MYSQL_HOST = _parsed.hostname
+        MYSQL_PORT = _parsed.port or 3306
+        MYSQL_USER = _parsed.username
+        MYSQL_PASSWORD = _parsed.password
+        MYSQL_DATABASE = (_parsed.path or '/campus_placement').lstrip('/')
+    else:
+        MYSQL_HOST = os.environ.get('MYSQL_HOST') or 'localhost'
+        MYSQL_PORT = int(os.environ.get('MYSQL_PORT') or 3306)
+        MYSQL_USER = os.environ.get('MYSQL_USER') or 'root'
+        MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD') or ''
+        MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE') or 'campus_placement'
     
     # Larger pool for production
-    MYSQL_POOL_SIZE = int(os.environ.get('MYSQL_POOL_SIZE') or 10)
+    MYSQL_POOL_SIZE = int(os.environ.get('MYSQL_POOL_SIZE') or 5)
+    
+    # Vercel serverless: uploads go to /tmp (ephemeral)
+    if os.environ.get('VERCEL'):
+        UPLOAD_FOLDER = '/tmp/placify_uploads'
+        SESSION_COOKIE_SECURE = True
 
 
 class TestingConfig(Config):
@@ -174,20 +195,14 @@ config = {
 def get_config(env: str = None) -> type:
     """
     Get configuration based on environment.
-    
-    Args:
-        env: Environment name (development, production, testing, railway, render)
-             If None, reads from FLASK_ENV environment variable
-    
-    Returns:
-        Configuration class
-    
-    Example:
-        config = get_config()
-        app.config.from_object(config)
+    Auto-detects Vercel deployment via VERCEL env variable.
     """
     if env is None:
-        env = os.environ.get('FLASK_ENV', 'development')
+        # Auto-detect Vercel
+        if os.environ.get('VERCEL'):
+            env = 'production'
+        else:
+            env = os.environ.get('FLASK_ENV', 'development')
     
     return config.get(env, config['default'])
 
