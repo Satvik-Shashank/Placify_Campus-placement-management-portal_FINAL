@@ -3,26 +3,44 @@
 {% block page_title %}Applicant Pipeline{% endblock %}
 
 {% block content %}
-<div class="card mb-4">
-  <div class="card-body">
-    <div class="display-flex justify-between" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-      <h3 style="margin:0;">Filter Pipeline</h3>
-      <form method="GET" style="display:flex; gap:0.5rem;">
-        <select name="status" class="form-control" onchange="this.form.submit()">
-          <option value="">All Candidates</option>
-          <option value="applied" {% if status_f == 'applied' %}selected{% endif %}>Applied</option>
-          <option value="in_progress" {% if status_f == 'in_progress' %}selected{% endif %}>In Progress</option>
-          <option value="selected" {% if status_f == 'selected' %}selected{% endif %}>Selected</option>
-          <option value="rejected" {% if status_f == 'rejected' %}selected{% endif %}>Rejected</option>
-        </select>
-      </form>
-    </div>
+
+<!-- Page header -->
+<div class="d-flex align-center justify-between mb-6">
+  <div>
+    <h1 class="page-heading">Applicant Pipeline 👥</h1>
+    <p class="page-sub">Track candidates through each stage of the recruitment process</p>
   </div>
 </div>
 
+<!-- Filter bar -->
+<div class="card mb-4">
+  <div class="card-body" style="padding:14px 20px;display:flex;align-items:center;gap:16px;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+    <span style="font-size:13.5px;font-weight:600;color:var(--gray-700);">Filter by Status</span>
+    <form method="GET" style="flex:1;">
+      <select name="status" class="form-control form-select" style="max-width:220px;" onchange="this.form.submit()">
+        <option value="">All Candidates</option>
+        <option value="applied" {% if status_f == 'applied' %}selected{% endif %}>Applied</option>
+        <option value="in_progress" {% if status_f == 'in_progress' %}selected{% endif %}>In Progress</option>
+        <option value="selected" {% if status_f == 'selected' %}selected{% endif %}>Selected</option>
+        <option value="rejected" {% if status_f == 'rejected' %}selected{% endif %}>Rejected</option>
+      </select>
+    </form>
+  </div>
+</div>
+
+<!-- Pipeline table -->
 <div class="card">
-  <div class="table-responsive">
-    <table class="table">
+  <div class="card-header">
+    <div class="card-title">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Candidates
+    </div>
+    <span class="badge badge-blue">{{ applicants|length }} total</span>
+  </div>
+  {% if applicants %}
+  <div class="table-wrapper">
+    <table class="data-table">
       <thead>
         <tr>
           <th>Candidate Name</th>
@@ -33,25 +51,32 @@
         </tr>
       </thead>
       <tbody>
+        {% set sc = {'applied':'badge-blue','in_progress':'badge-amber','selected':'badge-green','rejected':'badge-red','withdrawn':'badge-gray'} %}
         {% for a in applicants %}
         <tr>
-          <td><strong>{{ a.name }}</strong></td>
-          <td>{{ a.department }}</td>
-          <td><b>{{ a.cgpa }}</b></td>
+          <td class="fw-medium">{{ a.name }}</td>
+          <td class="text-muted">{{ a.department }}</td>
+          <td><span style="font-weight:600;color:var(--primary);">{{ a.cgpa }}</span></td>
           <td>
-            <span class="badge badge-{% if a.status == 'selected' %}success{% elif a.status == 'rejected' %}danger{% elif a.status == 'in_progress' %}primary{% else %}outline{% endif %}">
+            <span class="badge {{ sc.get(a.status, 'badge-gray') }}">
               {{ a.status|replace('_', ' ')|title }}
             </span>
           </td>
           <td>
-            <a href="{{ url_for('company_applicant_review', student_id=a.student_id) }}" class="btn btn-sm btn-outline">Review Profile</a>
+            <a href="{{ url_for('company_applicant_review', student_id=a.student_id) }}" class="btn btn-sm btn-outline-primary">Review Profile</a>
           </td>
         </tr>
-        {% else %}
-        <tr><td colspan="5" class="text-center text-muted">No applicants found in this stage.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    <h4>No applicants found</h4>
+    <p>No candidates match the selected filter criteria.</p>
+  </div>
+  {% endif %}
 </div>
+
 {% endblock %}

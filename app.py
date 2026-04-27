@@ -1060,7 +1060,9 @@ def company_dashboard():
     rounds = execute_query("SELECT * FROM rounds WHERE company_id = %s ORDER BY round_number", (cid,))
     active_rounds = rounds['data'] if rounds['success'] else []
     
-    return render_template('company/dashboard.html', stats=stats, active_rounds=active_rounds)
+    company = execute_query("SELECT * FROM companies WHERE company_id=%s", (cid,), fetch_one=True)['data']
+    
+    return render_template('company/dashboard.html', stats=stats, active_rounds=active_rounds, company=company)
 
 @app.route('/company/drives', methods=['GET', 'POST'])
 @company_required

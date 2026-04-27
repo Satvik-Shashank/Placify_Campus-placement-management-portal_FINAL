@@ -3,24 +3,40 @@
 {% block page_title %}Offer Release{% endblock %}
 
 {% block content %}
-<div class="grid" style="grid-template-columns: 2fr 1fr;">
+
+<!-- Page header -->
+<div class="d-flex align-center justify-between mb-6">
+  <div>
+    <h1 class="page-heading">Offer Release 📜</h1>
+    <p class="page-sub">Issue digital offer letters and track candidate acceptance</p>
+  </div>
+</div>
+
+<div class="grid-2" style="gap:20px">
+
+  <!-- Release New Offer -->
   <div class="card mb-4">
-    <div class="card-header"><h3 class="card-title">Release New Offer</h3></div>
+    <div class="card-header">
+      <div class="card-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Release New Offer
+      </div>
+    </div>
     <div class="card-body">
       <form method="POST">
         <div class="form-group">
           <label class="form-label">Select Finalist Candidate</label>
-          <select name="application_id" class="form-control" required>
+          <select name="application_id" class="form-control form-select" required>
             <option value="">-- Choose Candidate --</option>
             {% for a in apps %}
               <option value="{{ a.application_id }}">{{ a.name }}</option>
             {% endfor %}
           </select>
           {% if not apps %}
-          <small class="text-danger mt-1 d-block">No candidates have reached the 'Selected' pipeline status yet.</small>
+          <div class="form-hint" style="color:var(--red-600);">No candidates have reached the 'Selected' pipeline status yet.</div>
           {% endif %}
         </div>
-        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:1rem;">
+        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Offered CTC (LPA)</label>
             <input type="number" step="0.1" name="ctc" class="form-control" required>
@@ -34,26 +50,57 @@
           <label class="form-label">Student Acceptance Deadline</label>
           <input type="date" name="deadline" class="form-control" required>
         </div>
-        <div class="mt-3 text-right">
-          <button type="submit" class="btn btn-primary" {% if not apps %}disabled{% endif %}>Issue Digital Offer Letter</button>
-        </div>
+        <button type="submit" class="btn btn-primary w-100" {% if not apps %}disabled{% endif %}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Issue Digital Offer Letter
+        </button>
       </form>
     </div>
   </div>
 
-  <div class="card mb-4" style="background:#f8f9fa;">
-    <div class="card-body p-4 text-center">
-      <div style="font-size:36px; margin-bottom:10px">📜</div>
-      <h4>Digital Offers</h4>
-      <p class="text-muted" style="font-size:14px">Offers released through Placify use ACID transactions to guarantee a candidate cannot hold multiple binding offers outside of college policy.</p>
+  <!-- Info Card -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <div class="card-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        About Digital Offers
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="padding:20px;background:var(--blue-50);border-radius:var(--radius);border:1px solid var(--blue-100);">
+        <div style="font-size:36px;text-align:center;margin-bottom:12px;">📜</div>
+        <h4 style="text-align:center;color:var(--blue-700);margin-bottom:8px;">ACID-Compliant Offers</h4>
+        <p style="font-size:13px;color:var(--blue-700);text-align:center;line-height:1.6;">
+          Offers released through Placify use ACID transactions to guarantee a candidate cannot hold multiple binding offers outside of college policy.
+        </p>
+      </div>
+      <div style="margin-top:16px;padding:16px;background:var(--green-50);border-radius:var(--radius);border:1px solid var(--green-100);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span style="font-size:13px;font-weight:600;color:var(--green-700);">Offer Summary</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--green-700);line-height:1.5;">
+          {{ offers|length }} offer{{ 's' if offers|length != 1 }} issued to date.
+          {% if offers %}{{ offers|selectattr('status','eq','accepted')|list|length }} accepted.{% endif %}
+        </div>
+      </div>
     </div>
   </div>
+
 </div>
 
+<!-- Issued Offers Table -->
 <div class="card">
-  <div class="card-header"><h3 class="card-title">Issued Offers</h3></div>
-  <div class="table-responsive">
-    <table class="table">
+  <div class="card-header">
+    <div class="card-title">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Issued Offers
+    </div>
+    <span class="badge badge-blue">{{ offers|length }} total</span>
+  </div>
+  {% if offers %}
+  <div class="table-wrapper">
+    <table class="data-table">
       <thead>
         <tr>
           <th>Candidate Name</th>
@@ -64,24 +111,39 @@
         </tr>
       </thead>
       <tbody>
+        {% set sc = {'accepted':'badge-green','declined':'badge-red','revoked':'badge-gray','pending':'badge-amber'} %}
         {% for o in offers %}
         <tr>
-          <td><b>{{ o.name }}</b> <div class="text-muted" style="font-size:12px">{{ o.department }}</div></td>
-          <td>{{ o.offered_role }}<br><b style="color:var(--primary-color)">{{ o.offered_ctc }} LPA</b></td>
-          <td>{{ o.created_at|fmt_date }}</td>
-          <td>{{ o.acceptance_deadline|fmt_date }}</td>
           <td>
-            <span class="badge badge-{% if o.status == 'accepted' %}success{% elif o.status == 'declined' %}danger{% elif o.status == 'revoked' %}outline{% else %}primary{% endif %}">
+            <div class="fw-medium">{{ o.name }}</div>
+            <div class="text-muted" style="font-size:11.5px;">{{ o.department }}</div>
+          </td>
+          <td>
+            <div>{{ o.offered_role }}</div>
+            <div style="font-weight:700;color:var(--primary);">₹{{ o.offered_ctc }} LPA</div>
+          </td>
+          <td class="text-muted">{{ o.created_at|fmt_date }}</td>
+          <td class="text-muted">{{ o.acceptance_deadline|fmt_date }}</td>
+          <td>
+            <span class="badge {{ sc.get(o.status, 'badge-gray') }}">
               {{ o.status|title }}
             </span>
-            {% if o.status == 'accepted' %}<div class="text-success mt-1" style="font-size:11px">Accepted: {{ o.accepted_at|fmt_date }}</div>{% endif %}
+            {% if o.status == 'accepted' %}
+            <div style="font-size:10.5px;color:var(--green-600);margin-top:3px;">Accepted: {{ o.accepted_at|fmt_date }}</div>
+            {% endif %}
           </td>
         </tr>
-        {% else %}
-        <tr><td colspan="5" class="text-center text-muted">No offers issued yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <h4>No offers issued yet</h4>
+    <p>Select a finalist candidate above to release their offer letter.</p>
+  </div>
+  {% endif %}
 </div>
+
 {% endblock %}
