@@ -1034,12 +1034,6 @@ def api_company_chart():
     return jsonify(r['data'] if r['success'] else [])
 
 
-@app.route('/health')
-def health():
-    from db import test_connection
-    return jsonify({'status': 'ok', 'db_connected': test_connection()})
-
-
 # =============================================================================
 # COMPANY / RECRUITER ROUTES
 # =============================================================================
