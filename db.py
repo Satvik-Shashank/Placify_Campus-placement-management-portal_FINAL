@@ -141,30 +141,31 @@ def transaction():
 
 def call_procedure(proc_name: str, args: Optional[Tuple] = None, fetch_results: bool = True) -> Dict[str, Any]:
     result = {'success': False, 'data': None, 'error': None, 'rowcount': 0}
-    
-    with get_connection() as connection:
-        cursor = connection.cursor(cursor_factory=extras.RealDictCursor)
-        try:
-            # PostgreSQL: SELECT * FROM function_name(args)
-            placeholders = ', '.join(['%s'] * len(args)) if args else ''
-            query = f"SELECT * FROM {proc_name}({placeholders})"
-            cursor.execute(query, args or ())
-            
-            if fetch_results:
-                rows = cursor.fetchall()
-                # Convert RealDictRow to regular dict
-                result['data'] = [dict(row) for row in rows]
-            
-            connection.commit()
-            result['success'] = True
-            result['rowcount'] = cursor.rowcount
-        except Exception as e:
-            connection.rollback()
-            result['error'] = str(e)
-            logger.error(f"Procedure '{proc_name}' failed: {result['error']}")
-        finally:
-            cursor.close()
-    
+    try:
+        with get_connection() as connection:
+            cursor = connection.cursor(cursor_factory=extras.RealDictCursor)
+            try:
+                # PostgreSQL: SELECT * FROM function_name(args)
+                placeholders = ', '.join(['%s'] * len(args)) if args else ''
+                query = f"SELECT * FROM {proc_name}({placeholders})"
+                cursor.execute(query, args or ())
+
+                if fetch_results:
+                    rows = cursor.fetchall()
+                    result['data'] = [dict(row) for row in rows]
+
+                connection.commit()
+                result['success'] = True
+                result['rowcount'] = cursor.rowcount
+            except Exception as e:
+                connection.rollback()
+                result['error'] = str(e)
+                logger.error(f"Procedure '{proc_name}' failed: {result['error']}")
+            finally:
+                cursor.close()
+    except Exception as outer:
+        result['error'] = str(outer)
+        logger.error(f"Procedure '{proc_name}' connection error: {outer}")
     return result
 
 
@@ -174,38 +175,39 @@ def call_procedure_with_out_params(proc_name: str, in_args: Tuple, out_param_cou
     The 'out params' are columns of the returned row.
     """
     result = {'success': False, 'data': None, 'out_params': [], 'error': None}
-    
-    with get_connection() as connection:
-        cursor = connection.cursor(cursor_factory=extras.RealDictCursor)
-        try:
-            placeholders = ', '.join(['%s'] * len(in_args))
-            query = f"SELECT * FROM {proc_name}({placeholders})"
-            cursor.execute(query, in_args)
-            
-            row = cursor.fetchone()
-            if row:
-                row_dict = dict(row)
-                result['out_params'] = list(row_dict.values())
-                result['data'] = [row_dict]
-            
-            # Fetch any remaining rows
-            remaining = cursor.fetchall()
-            if remaining:
-                result['data'] = [dict(row)] + [dict(r) for r in remaining] if row else [dict(r) for r in remaining]
-            
-            connection.commit()
-            result['success'] = True
-        except Exception as e:
-            connection.rollback()
-            result['error'] = str(e)
-            if 'RAISE' in str(e) or 'ERROR' in str(e):
-                # Extract the meaningful message from PG error
-                msg = str(e).split('\n')[0]
-                result['error'] = msg
-            logger.error(f"Procedure '{proc_name}' failed: {result['error']}")
-        finally:
-            cursor.close()
-    
+    try:
+        with get_connection() as connection:
+            cursor = connection.cursor(cursor_factory=extras.RealDictCursor)
+            try:
+                placeholders = ', '.join(['%s'] * len(in_args))
+                query = f"SELECT * FROM {proc_name}({placeholders})"
+                cursor.execute(query, in_args)
+
+                row = cursor.fetchone()
+                if row:
+                    row_dict = dict(row)
+                    result['out_params'] = list(row_dict.values())
+                    result['data'] = [row_dict]
+
+                # Fetch any remaining rows
+                remaining = cursor.fetchall()
+                if remaining:
+                    result['data'] = [dict(row)] + [dict(r) for r in remaining] if row else [dict(r) for r in remaining]
+
+                connection.commit()
+                result['success'] = True
+            except Exception as e:
+                connection.rollback()
+                result['error'] = str(e)
+                if 'RAISE' in str(e) or 'ERROR' in str(e):
+                    msg = str(e).split('\n')[0]
+                    result['error'] = msg
+                logger.error(f"Procedure '{proc_name}' failed: {result['error']}")
+            finally:
+                cursor.close()
+    except Exception as outer:
+        result['error'] = str(outer)
+        logger.error(f"Procedure '{proc_name}' connection error: {outer}")
     return result
 
 
@@ -215,71 +217,71 @@ def call_procedure_with_out_params(proc_name: str, in_args: Tuple, out_param_cou
 
 def execute_query(query: str, params: Optional[Tuple] = None, fetch: bool = True, fetch_one: bool = False) -> Dict[str, Any]:
     result = {'success': False, 'data': None, 'rowcount': 0, 'lastrowid': None, 'error': None}
-    
-    # Convert MySQL-isms to PostgreSQL
-    # JSON_CONTAINS -> @> operator (handled in app queries if needed)
-    # DATEDIFF(a,b) -> EXTRACT(DAY FROM (a - b))
-    
-    with get_cursor() as cursor:
-        try:
-            # Handle INSERT ... RETURNING for lastrowid
-            is_insert = query.strip().upper().startswith('INSERT')
-            if is_insert and 'RETURNING' not in query.upper():
-                # Auto-add RETURNING for the primary key
-                query = query.rstrip().rstrip(';')
-                # Try to detect table name for RETURNING
-                import re
-                m = re.match(r'INSERT\s+INTO\s+(\w+)', query, re.IGNORECASE)
-                if m:
-                    table = m.group(1)
-                    pk_map = {
-                        'users': 'user_id', 'students': 'student_id',
-                        'companies': 'company_id', 'applications': 'application_id',
-                        'rounds': 'round_id', 'round_results': 'result_id',
-                        'offers': 'offer_id', 'skills': 'skill_id',
-                        'student_skills': 'student_skill_id',
-                        'audit_logs': 'log_id', 'eligibility_criteria': 'criteria_id',
-                        'placement_policy': 'policy_id'
-                    }
-                    pk = pk_map.get(table, table.rstrip('s') + '_id')
-                    query += f" RETURNING {pk}"
-            
-            cursor.execute(query, params or ())
-            result['rowcount'] = cursor.rowcount
-            
-            if fetch or is_insert:
-                if fetch_one:
-                    row = cursor.fetchone()
-                    result['data'] = dict(row) if row else None
-                else:
-                    rows = cursor.fetchall()
-                    if rows:
-                        result['data'] = [dict(r) for r in rows]
-                        # For INSERT, extract lastrowid from RETURNING
-                        if is_insert and rows:
-                            first_row = dict(rows[0])
-                            result['lastrowid'] = list(first_row.values())[0]
+    try:
+        with get_cursor() as cursor:
+            try:
+                # Handle INSERT ... RETURNING for lastrowid
+                is_insert = query.strip().upper().startswith('INSERT')
+                if is_insert and 'RETURNING' not in query.upper():
+                    query = query.rstrip().rstrip(';')
+                    import re
+                    m = re.match(r'INSERT\s+INTO\s+(\w+)', query, re.IGNORECASE)
+                    if m:
+                        table = m.group(1)
+                        pk_map = {
+                            'users': 'user_id', 'students': 'student_id',
+                            'companies': 'company_id', 'applications': 'application_id',
+                            'rounds': 'round_id', 'round_results': 'result_id',
+                            'offers': 'offer_id', 'skills': 'skill_id',
+                            'student_skills': 'student_skill_id',
+                            'audit_logs': 'log_id', 'eligibility_criteria': 'criteria_id',
+                            'placement_policy': 'policy_id'
+                        }
+                        pk = pk_map.get(table, table.rstrip('s') + '_id')
+                        query += f" RETURNING {pk}"
+
+                cursor.execute(query, params or ())
+                result['rowcount'] = cursor.rowcount
+
+                if fetch or is_insert:
+                    if fetch_one:
+                        row = cursor.fetchone()
+                        result['data'] = dict(row) if row else None
                     else:
-                        result['data'] = [] if fetch else None
-            
-            result['success'] = True
-        except Exception as e:
-            result['error'] = str(e)
-            logger.error(f"Query failed: {result['error']}")
-    
+                        rows = cursor.fetchall()
+                        if rows:
+                            result['data'] = [dict(r) for r in rows]
+                            if is_insert and rows:
+                                first_row = dict(rows[0])
+                                result['lastrowid'] = list(first_row.values())[0]
+                        else:
+                            result['data'] = [] if fetch else None
+
+                result['success'] = True
+            except Exception as e:
+                result['error'] = str(e)
+                logger.error(f"Query failed: {result['error']}")
+    except Exception as outer:
+        # Pool unavailable or connection error — never raise to callers
+        result['error'] = str(outer)
+        logger.error(f"execute_query connection error: {outer}")
     return result
 
 
 def execute_many(query: str, params_list: List[Tuple]) -> Dict[str, Any]:
     result = {'success': False, 'rowcount': 0, 'error': None}
-    with get_cursor() as cursor:
-        try:
-            cursor.executemany(query, params_list)
-            result['rowcount'] = cursor.rowcount
-            result['success'] = True
-        except Exception as e:
-            result['error'] = str(e)
-            logger.error(f"Batch execution failed: {result['error']}")
+    try:
+        with get_cursor() as cursor:
+            try:
+                cursor.executemany(query, params_list)
+                result['rowcount'] = cursor.rowcount
+                result['success'] = True
+            except Exception as e:
+                result['error'] = str(e)
+                logger.error(f"Batch execution failed: {result['error']}")
+    except Exception as outer:
+        result['error'] = str(outer)
+        logger.error(f"execute_many connection error: {outer}")
     return result
 
 
