@@ -1227,15 +1227,34 @@ def create_admin():
 
 @app.route('/health')
 def health():
-    """Health check endpoint for deployment platforms."""
+    """Health check endpoint with diagnostics for deployment debugging."""
+    import os
+    diag = {
+        'service': 'placify',
+        'serverless': bool(os.environ.get('VERCEL')),
+        'host': (config.MYSQL_HOST or '(not set)')[:30],
+        'port': str(config.MYSQL_PORT),
+        'user': (config.MYSQL_USER or '(not set)')[:20],
+        'db': config.MYSQL_DATABASE or '(not set)',
+    }
     try:
-        from db import test_connection
+        from db import test_connection, _resolve_ipv4, IS_SERVERLESS
+        diag['is_serverless'] = IS_SERVERLESS
+        # Show what IP the host resolves to
+        try:
+            resolved = _resolve_ipv4(config.MYSQL_HOST or 'localhost')
+            diag['resolved_ip'] = resolved
+        except Exception as re:
+            diag['resolved_ip'] = f'error: {re}'
         db_ok = test_connection()
-    except Exception:
+        diag['db_connected'] = db_ok
+    except Exception as e:
         db_ok = False
-    status = 'ok' if db_ok else 'degraded'
+        diag['db_connected'] = False
+        diag['db_error'] = str(e)[:200]
+    diag['status'] = 'ok' if db_ok else 'degraded'
     code = 200 if db_ok else 503
-    return jsonify(status=status, service='placify', db=db_ok), code
+    return jsonify(diag), code
 
 
 # =============================================================================
